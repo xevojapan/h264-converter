@@ -1,0 +1,24 @@
+{
+  "name": "h264-converter",
+  "version": "0.1.0",
+  "description": "Convert H.264 Video Streaming to Fragmented MP4",
+  "repository": "https://github.com/xevokk/h264-converter",
+  "author": "Xevo K.K.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "prebuild": "tslint -p . -t stylish",
+    "build": "tsc -p .",
+    "watch": "tsc -p . -w",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^2.6.1",
+    "tslint": "^5.4.3",
+    "typescript": "^2.3.4"
+  },
+  "dependencies": {
+    "tslib": "^1.7.1"
+  }
+}
