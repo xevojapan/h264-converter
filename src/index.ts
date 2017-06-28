@@ -3,8 +3,6 @@ import MP4 from './mp4-generator';
 import VideoStreamBuffer from './util/nalu-stream-buffer';
 
 export const mimeType = 'video/mp4; codecs="avc1.42E01E"';
-const fps = 30;
-const fpf = 6;
 
 export default class VideoConverter {
 
@@ -27,7 +25,7 @@ export default class VideoConverter {
         };
     }
 
-    constructor(private element: HTMLVideoElement) {
+    constructor(private element: HTMLVideoElement, private fps: number = 60, private fpf = fps) {
         if (!MediaSource || !MediaSource.isTypeSupported(mimeType)) {
             throw new Error(`Your browser is not supported: ${mimeType}`);
         }
@@ -54,7 +52,7 @@ export default class VideoConverter {
                     for (let i = 0, len = this.element.buffered.length; i < len; i++) {
                         console.log(`    video.buffered [${i}]: ${this.element.buffered.start(i)}, ${this.element.buffered.end(i)}`);
                     }
-                    console.log(`  video.currentTimen=${this.element.currentTime}`);
+                    console.log(`  video.currentTime=${this.element.currentTime}`);
                     console.log(`  video.readyState=${this.element.readyState}`);
                     const data = this.queue.shift();
                     if (data) {
@@ -106,7 +104,7 @@ export default class VideoConverter {
             this.mediaSource.endOfStream();
         }
         this.mediaSource = new MediaSource();
-        this.remuxer = new H264Remuxer(fps, fpf, fps * 60);
+        this.remuxer = new H264Remuxer(this.fps, this.fpf, this.fps * 60);
         this.mediaReady = false;
         this.mediaReadyPromise = undefined;
         this.queue = [];
