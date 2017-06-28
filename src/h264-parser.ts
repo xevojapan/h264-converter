@@ -1,6 +1,7 @@
 import H264Remuxer from './h264-remuxer';
 import { Track } from './types';
 import BitStream from './util/bit-stream';
+import * as debug from './util/debug';
 import NALU from './util/NALU';
 
 // tslint:disable:member-ordering
@@ -64,7 +65,7 @@ export default class H264Parser {
         }
 
         let push = false;
-        // console.log(`NALU type=${unit.type()}`);
+        // debug.log(`NALU type=${unit.type()}`);
         switch (unit.type()) {
             case NALU.NDR:
             case NALU.IDR:
@@ -75,9 +76,9 @@ export default class H264Parser {
                 break;
             case NALU.SPS:
                 if (this.track.sps.length === 0) {
-                    // console.log(`  SPS: length=${unit.getData().byteLength}, ${unit.getData().subarray(4).byteLength}`);
+                    // debug.log(`  SPS: length=${unit.getData().byteLength}, ${unit.getData().subarray(4).byteLength}`);
                     this.parseSPS(unit.getData().subarray(4));
-                    console.log(` Found SPS type NALU frame.`);
+                    debug.log(` Found SPS type NALU frame.`);
                     if (!this.remuxer.readyToDecode && this.track.pps.length > 0 && this.track.sps.length > 0) {
                         this.remuxer.readyToDecode = true;
                     }
@@ -86,14 +87,14 @@ export default class H264Parser {
             case NALU.PPS:
                 if (this.track.pps.length === 0) {
                     this.parsePPS(unit.getData().subarray(4));
-                    console.log(` Found PPS type NALU frame.`);
+                    debug.log(` Found PPS type NALU frame.`);
                     if (!this.remuxer.readyToDecode && this.track.pps.length > 0 && this.track.sps.length > 0) {
                         this.remuxer.readyToDecode = true;
                     }
                 }
                 break;
             default:
-                console.log(` Found Unknown type NALU frame. type=${unit.type()}`);
+                debug.log(` Found Unknown type NALU frame. type=${unit.type()}`);
                 break;
         }
         return push;
@@ -227,7 +228,7 @@ export default class H264Parser {
                         break;
                     }
                     default: {
-                        console.error(`  H264: Unknown aspectRatioIdc=${aspectRatioIdc}`);
+                        debug.error(`  H264: Unknown aspectRatioIdc=${aspectRatioIdc}`);
                     }
                 }
                 if (sarRatio) {
@@ -251,8 +252,8 @@ export default class H264Parser {
                 const timeScale = decoder.readUInt();
                 const fixedFrameRate = decoder.readBoolean();
                 const frameDuration = timeScale / (2 * unitsInTick);
-                console.log(`timescale: ${timeScale}; unitsInTick: ${unitsInTick}; ` +
-                            `fixedFramerate: ${fixedFrameRate}; avgFrameDuration: ${frameDuration}`);
+                debug.log(`timescale: ${timeScale}; unitsInTick: ${unitsInTick}; ` +
+                          `fixedFramerate: ${fixedFrameRate}; avgFrameDuration: ${frameDuration}`);
             }
         }
         return {
@@ -272,7 +273,7 @@ export default class H264Parser {
     // }
 
     private static readSEI(data: Uint8Array): SEIMessage[] {
-        console.log(`read SEI: ${data}`);
+        // debug.log(`read SEI: ${data}`);
         const decoder = new BitStream(data);
         decoder.skipBits(8);
 
@@ -301,7 +302,7 @@ export default class H264Parser {
     }
     private static readSEIPayload(decoder: BitStream, type: number, size: number): SEIMessage {
         let result: SEIMessage;
-        console.log(`  SEI Frame: type=${type}, size=${size}`);
+        // debug.log(`  SEI Frame: type=${type}, size=${size}`);
         switch (type) {
             default:
                 result = { type };

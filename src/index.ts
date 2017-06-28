@@ -1,8 +1,10 @@
 import H264Remuxer from './h264-remuxer';
 import MP4 from './mp4-generator';
+import * as debug from './util/debug';
 import VideoStreamBuffer from './util/nalu-stream-buffer';
 
 export const mimeType = 'video/mp4; codecs="avc1.42E01E"';
+export { setLogger } from './util/debug';
 
 export default class VideoConverter {
 
@@ -35,38 +37,40 @@ export default class VideoConverter {
     private setup(): Promise<void> {
         this.mediaReadyPromise = new Promise<void>((resolve, _reject) => {
             this.mediaSource.addEventListener('sourceopen', () => {
-                console.log(`Media Source opened.`);
+                debug.log(`Media Source opened.`);
                 this.sourceBuffer = this.mediaSource.addSourceBuffer(mimeType);
                 // this.sourceBuffer.mode = 'sequence';
                 this.sourceBuffer.addEventListener('updateend', () => {
-                    console.log(`  SourceBuffer updateend`);
-                    console.log(`    sourceBuffer.buffered.length=${this.sourceBuffer.buffered.length}`);
+                    debug.log(`  SourceBuffer updateend`);
+                    debug.log(`    sourceBuffer.buffered.length=${this.sourceBuffer.buffered.length}`);
                     for (let i = 0, len = this.sourceBuffer.buffered.length; i < len; i++) {
-                        console.log(`    sourceBuffer.buffered [${i}]: ` +
+                        debug.log(`    sourceBuffer.buffered [${i}]: ` +
                                     `${this.sourceBuffer.buffered.start(i)}, ${this.sourceBuffer.buffered.end(i)}`);
                     }
-                    console.log(`  mediasource.duration=${this.mediaSource.duration}`);
-                    console.log(`  mediasource.readyState=${this.mediaSource.readyState}`);
-                    console.log(`  video.duration=${this.element.duration}`);
-                    console.log(`    video.buffered.length=${this.element.buffered.length}`);
-                    for (let i = 0, len = this.element.buffered.length; i < len; i++) {
-                        console.log(`    video.buffered [${i}]: ${this.element.buffered.start(i)}, ${this.element.buffered.end(i)}`);
+                    debug.log(`  mediasource.duration=${this.mediaSource.duration}`);
+                    debug.log(`  mediasource.readyState=${this.mediaSource.readyState}`);
+                    debug.log(`  video.duration=${this.element.duration}`);
+                    debug.log(`    video.buffered.length=${this.element.buffered.length}`);
+                    if (debug.isEnable()) {
+                        for (let i = 0, len = this.element.buffered.length; i < len; i++) {
+                            debug.log(`    video.buffered [${i}]: ${this.element.buffered.start(i)}, ${this.element.buffered.end(i)}`);
+                        }
                     }
-                    console.log(`  video.currentTime=${this.element.currentTime}`);
-                    console.log(`  video.readyState=${this.element.readyState}`);
+                    debug.log(`  video.currentTime=${this.element.currentTime}`);
+                    debug.log(`  video.readyState=${this.element.readyState}`);
                     const data = this.queue.shift();
                     if (data) {
                         this.writeBuffer(data);
                     }
                 });
                 this.sourceBuffer.addEventListener('error', () => {
-                    console.error('  SourceBuffer errored!');
+                    debug.error('  SourceBuffer errored!');
                 });
                 this.mediaReady = true;
                 resolve();
             }, false);
             this.mediaSource.addEventListener('sourceclose', () => {
-                console.log(`Media Source closed.`);
+                debug.log(`Media Source closed.`);
                 this.mediaReady = false;
             }, false);
 
@@ -129,12 +133,12 @@ export default class VideoConverter {
             this.writeBuffer(MP4.initSegment([remuxer.mp4track], Infinity, remuxer.timescale));
         }
         if (pay && pay.byteLength) {
-            console.log(` Put fragment: ${remuxer.seqNum}, frames=${remuxer.mp4track.samples.length}, size=${pay.byteLength}`);
+            debug.log(` Put fragment: ${remuxer.seqNum}, frames=${remuxer.mp4track.samples.length}, size=${pay.byteLength}`);
             const fragment = MP4.fragmentSegment(remuxer.seqNum, dts, remuxer.mp4track, pay);
             this.writeBuffer(fragment);
             remuxer.flush();
         } else {
-            console.error(`Nothing payload!`);
+            debug.error(`Nothing payload!`);
         }
     }
 
@@ -164,7 +168,7 @@ export default class VideoConverter {
     private doAppend(data: Uint8Array): void {
         const error = this.element.error;
         if (error) {
-            console.error(`MSE Error Occured: ${VideoConverter.errorNotes[error.code]}`);
+            debug.error(`MSE Error Occured: ${VideoConverter.errorNotes[error.code]}`);
             this.element.pause();
             if (this.mediaSource.readyState === 'open') {
                 this.mediaSource.endOfStream();
@@ -173,15 +177,15 @@ export default class VideoConverter {
             try {
                 // this.downloadVideo(data);
                 this.sourceBuffer.appendBuffer(data);
-                console.log(`  appended buffer: size=${data.byteLength}`);
+                debug.log(`  appended buffer: size=${data.byteLength}`);
             } catch (err) {
                 // if (err.name === 'QuotaExceededError') {
-                //     console.log(`MSE: quota fail.`);
+                //     debug.log(`MSE: quota fail.`);
                 //     this.queue.unshift(data);
                 //     this.initCleanUp();
                 //     return;
                 // }
-                console.error(`MSE Error occured while appending buffer. ${err.name}: ${err.message}`);
+                debug.error(`MSE Error occured while appending buffer. ${err.name}: ${err.message}`);
             }
         }
     }

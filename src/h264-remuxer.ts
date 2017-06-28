@@ -1,5 +1,6 @@
 import H264Parser from './h264-parser';
 import { Track } from './types';
+import * as debug from './util/debug';
 import NALU from './util/NALU';
 
 // tslint:disable:no-bitwise
@@ -78,6 +79,8 @@ export default class H264Remuxer {
                     const dts = this.totalDTS;
                     this.totalDTS = this.stepDTS * this.frameCount;
                     return [dts, fragment];
+                } else {
+                    debug.log(`No mp4 sample data.`);
                 }
             }
             this.unitSamples.push([]);
@@ -119,7 +122,6 @@ export default class H264Remuxer {
         }
 
         if (offset === 0) {
-            console.log(`No mp4 sample data.`);
             return undefined;
         }
         return payload;
@@ -127,7 +129,7 @@ export default class H264Remuxer {
 
     private checkReadyToDecode(): boolean {
         if (!this.readyToDecode || this.unitSamples.filter((array) => array.length > 0).length === 0) {
-            console.log(`Not ready to decode! readyToDecode(${this.readyToDecode}) is false or units is empty.`);
+            debug.log(`Not ready to decode! readyToDecode(${this.readyToDecode}) is false or units is empty.`);
             return false;
         }
         return true;

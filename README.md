@@ -73,3 +73,13 @@ pause the video.
 #### `reset(): void`
 
 reset inner state for changing stream.
+
+
+### debugging
+
+#### `setLogger(log: Logger, error?: Logger): void`
+
+set logger for output debugging log.
+
+- log: info logger, such as `console.log`.
+- error: error logger, such as `console.error`. default is same sa `log` value.

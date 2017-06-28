@@ -9,7 +9,6 @@
         "object-literal-sort-keys": false,
         "max-line-length": [true, 140],
         "member-ordering": [false],
-        "no-console": [false],
         "variable-name": [true, "ban-keywords"]
     },
     "rulesDirectory": []
