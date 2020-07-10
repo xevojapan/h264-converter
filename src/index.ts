@@ -60,7 +60,7 @@ export default class VideoConverter {
                     debug.log(`  video.readyState=${this.element.readyState}`);
                     const data = this.queue.shift();
                     if (data) {
-                        this.writeBuffer(data);
+                        this.doAppend(data);
                     }
                 });
                 this.sourceBuffer.addEventListener('error', () => {
@@ -144,7 +144,7 @@ export default class VideoConverter {
 
     private writeBuffer(data: Uint8Array): void {
         if (this.mediaReady) {
-            if (this.sourceBuffer.updating) {
+            if (this.sourceBuffer.updating || this.queue.length) {
                 this.queue.push(data);
             } else {
                 this.doAppend(data);
@@ -156,7 +156,7 @@ export default class VideoConverter {
                     if (!this.sourceBuffer.updating) {
                         const d = this.queue.shift();
                         if (d) {
-                            this.writeBuffer(d);
+                            this.doAppend(d);
                         }
                     }
                 });
