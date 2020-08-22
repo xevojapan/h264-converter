@@ -58,6 +58,9 @@ export default class VideoConverter {
                     }
                     debug.log(`  video.currentTime=${this.element.currentTime}`);
                     debug.log(`  video.readyState=${this.element.readyState}`);
+                    if (this.sourceBuffer.updating) {
+                        return;
+                    }
                     const data = this.queue.shift();
                     if (data) {
                         this.doAppend(data);
