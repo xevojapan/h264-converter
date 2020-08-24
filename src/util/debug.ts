@@ -1,24 +1,27 @@
 export type Logger = (message?: any, ...optionalParams: any[]) => void;
 
-let logger: Logger|undefined;
-let errorLogger: Logger|undefined;
+let mLogger: Logger|undefined;
+let mErrorLogger: Logger|undefined;
 
-export function setLogger(log: Logger, error?: Logger): void {
-    logger = log;
-    errorLogger = error != null ? error : log;
+export function setLogger(logger: Logger, errorLogger?: Logger): void {
+    mLogger = logger;
+    mErrorLogger = errorLogger != null ? errorLogger : logger;
 }
 
 export function isEnable(): boolean {
-    return logger != null;
+    return mLogger != null;
 }
 
+// tslint:disable-next-line:no-shadowed-variable
 export function log(message?: any, ...optionalParams: any[]): void {
-    if (logger) {
-        logger(message, ...optionalParams);
+    if (mLogger) {
+        mLogger(message, ...optionalParams);
     }
 }
+
+// tslint:disable-next-line:no-shadowed-variable
 export function error(message?: any, ...optionalParams: any[]): void {
-    if (errorLogger) {
-        errorLogger(message, ...optionalParams);
+    if (mErrorLogger) {
+        mErrorLogger(message, ...optionalParams);
     }
 }
