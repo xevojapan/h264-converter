@@ -63,6 +63,7 @@ export default class H264Remuxer {
         if (this.parser.parseNAL(nalu)) {
             this.unitSamples[this.unitSamples.length - 1].push(nalu);
             this.mp4track.len += nalu.getSize();
+            this.mp4track.isKeyFrame = nalu.isKeyframe();
         }
         if (!this.mp4track.seiBuffering && (nalu.type() === NALU.IDR || nalu.type() === NALU.NDR)) {
             return this.createNextFrame();
