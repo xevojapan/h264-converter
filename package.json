@@ -1,6 +1,6 @@
 {
   "name": "h264-converter",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Convert H.264 Video Streaming to Fragmented MP4",
   "repository": "https://github.com/xevokk/h264-converter",
   "author": "Xevo K.K.",
