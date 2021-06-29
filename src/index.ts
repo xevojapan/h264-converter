@@ -108,8 +108,12 @@ export default class VideoConverter {
     public reset(): void {
         this.receiveBuffer.clear();
         if (this.mediaSource && this.mediaSource.readyState === 'open') {
-            this.mediaSource.duration = 0;
-            this.mediaSource.endOfStream();
+            if (this.sourceBuffer.updating) {
+                const mediaSource = this.mediaSource;
+                this.sourceBuffer.addEventListener('updateend', () => {
+                    mediaSource.endOfStream();
+                });
+            }
         }
         this.mediaSource = new MediaSource();
         this.remuxer = new H264Remuxer(this.fps, this.fpf, this.fps * 60);
