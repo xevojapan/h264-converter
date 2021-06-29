@@ -75,22 +75,18 @@ export default class H264Parser {
                 push = this.parseSEI(unit.getData().subarray(4));
                 break;
             case NALU.SPS:
-                if (this.track.sps.length === 0) {
-                    // debug.log(`  SPS: length=${unit.getData().byteLength}, ${unit.getData().subarray(4).byteLength}`);
-                    this.parseSPS(unit.getData().subarray(4));
-                    debug.log(` Found SPS type NALU frame.`);
-                    if (!this.remuxer.readyToDecode && this.track.pps.length > 0 && this.track.sps.length > 0) {
-                        this.remuxer.readyToDecode = true;
-                    }
+                // debug.log(`  SPS: length=${unit.getData().byteLength}, ${unit.getData().subarray(4).byteLength}`);
+                this.parseSPS(unit.getData().subarray(4));
+                debug.log(` Found SPS type NALU frame.`);
+                if (!this.remuxer.readyToDecode && this.track.pps.length > 0 && this.track.sps.length > 0) {
+                    this.remuxer.readyToDecode = true;
                 }
                 break;
             case NALU.PPS:
-                if (this.track.pps.length === 0) {
-                    this.parsePPS(unit.getData().subarray(4));
-                    debug.log(` Found PPS type NALU frame.`);
-                    if (!this.remuxer.readyToDecode && this.track.pps.length > 0 && this.track.sps.length > 0) {
-                        this.remuxer.readyToDecode = true;
-                    }
+                this.parsePPS(unit.getData().subarray(4));
+                debug.log(` Found PPS type NALU frame.`);
+                if (!this.remuxer.readyToDecode && this.track.pps.length > 0 && this.track.sps.length > 0) {
+                    this.remuxer.readyToDecode = true;
                 }
                 break;
             default:

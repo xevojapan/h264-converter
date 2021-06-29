@@ -9,7 +9,6 @@ export { setLogger } from './util/debug';
 export default class VideoConverter {
 
     private mediaSource: MediaSource;
-    private sourceBuffer: SourceBuffer;
     private receiveBuffer: VideoStreamBuffer = new VideoStreamBuffer();
     private remuxer: H264Remuxer;
 
@@ -17,6 +16,8 @@ export default class VideoConverter {
     private mediaReadyPromise: Promise<void> | undefined;
     private queue: Uint8Array[] = [];
     private isFirstFrame: boolean;
+
+    public sourceBuffer: SourceBuffer;
 
     static get errorNotes() {
         return {
