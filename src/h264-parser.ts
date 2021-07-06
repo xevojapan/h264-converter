@@ -134,8 +134,8 @@ export default class H264Parser {
         let sarScale = 1;
         decoder.readUByte();
         const profileIdc = decoder.readUByte(); // profile_idc
-        decoder.skipBits(5); // constraint_set[0-4]_flag, u(5)
-        decoder.skipBits(3); // reserved_zero_3bits u(3),
+        decoder.skipBits(6); // constraint_set[0-5]_flag, u(6)
+        decoder.skipBits(2); // reserved_zero_2bits u(2),
         decoder.skipBits(8); // level_idc u(8)
         decoder.skipUEG(); // seq_parameter_set_id
         // some profiles have more optional data we don't need
@@ -147,7 +147,10 @@ export default class H264Parser {
             profileIdc === 83 ||
             profileIdc === 86 ||
             profileIdc === 118 ||
-            profileIdc === 128) {
+            profileIdc === 128 ||
+            profileIdc === 138 ||
+            profileIdc === 139 ||
+            profileIdc === 134) {
             const chromaFormatIdc = decoder.readUEG();
             if (chromaFormatIdc === 3) {
                 decoder.skipBits(1); // separate_colour_plane_flag
@@ -231,22 +234,29 @@ export default class H264Parser {
                     sarScale = sarRatio[0] / sarRatio[1];
                 }
             }
-            if (decoder.readBoolean()) { decoder.skipBits(1); }
+            if (decoder.readBoolean()) {
+                // overscan_info_present_flag
+                decoder.skipBits(1); // overscan_appropriate_flag
+            }
 
             if (decoder.readBoolean()) {
-                decoder.skipBits(4);
+                // video_signal_type_present_flag
+                decoder.skipBits(4); // video_format u(3) + video_full_range_flag (1)
                 if (decoder.readBoolean()) {
-                    decoder.skipBits(24);
+                    // colour_description_present_flag
+                    decoder.skipBits(24); // colour_primaries u(8) + transfer_characteristics u(8) + matrix_coefficients u(8)
                 }
             }
             if (decoder.readBoolean()) {
-                decoder.skipUEG();
-                decoder.skipUEG();
+                // chroma_loc_info_present_flag
+                decoder.skipUEG(); // chroma_sample_loc_type_top_field
+                decoder.skipUEG(); // chroma_sample_loc_type_bottom_field
             }
             if (decoder.readBoolean()) {
-                const unitsInTick = decoder.readUInt();
-                const timeScale = decoder.readUInt();
-                const fixedFrameRate = decoder.readBoolean();
+                // timing_info_present_flag
+                const unitsInTick = decoder.readUInt(); // num_units_in_tick
+                const timeScale = decoder.readUInt(); // time_scale
+                const fixedFrameRate = decoder.readBoolean(); // fixed_frame_rate_flag
                 const frameDuration = timeScale / (2 * unitsInTick);
                 debug.log(`timescale: ${timeScale}; unitsInTick: ${unitsInTick}; ` +
                           `fixedFramerate: ${fixedFrameRate}; avgFrameDuration: ${frameDuration}`);
