@@ -253,13 +253,17 @@ export default class H264Parser {
                 decoder.skipUEG(); // chroma_sample_loc_type_bottom_field
             }
             if (decoder.readBoolean()) {
-                // timing_info_present_flag
-                const unitsInTick = decoder.readUInt(); // num_units_in_tick
-                const timeScale = decoder.readUInt(); // time_scale
-                const fixedFrameRate = decoder.readBoolean(); // fixed_frame_rate_flag
-                const frameDuration = timeScale / (2 * unitsInTick);
-                debug.log(`timescale: ${timeScale}; unitsInTick: ${unitsInTick}; ` +
-                          `fixedFramerate: ${fixedFrameRate}; avgFrameDuration: ${frameDuration}`);
+                if (decoder.bitsAvailable > 64) {
+                        // timing_info_present_flag
+                    const unitsInTick = decoder.readUInt(); // num_units_in_tick
+                    const timeScale = decoder.readUInt(); // time_scale
+                    const fixedFrameRate = decoder.readBoolean(); // fixed_frame_rate_flag
+                    const frameDuration = timeScale / (2 * unitsInTick);
+                    debug.log(`timescale: ${timeScale}; unitsInTick: ${unitsInTick}; ` +
+                        `fixedFramerate: ${fixedFrameRate}; avgFrameDuration: ${frameDuration}`);
+                } else {
+                    debug.log(`Truncated VUI (${decoder.bitsAvailable})`);
+                }
             }
         }
         return {
