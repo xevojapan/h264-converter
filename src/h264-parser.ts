@@ -11,6 +11,21 @@ export interface SEIMessage {
     type: number;
 }
 
+export type SPS = {
+    profile_idc: number;
+    constraint_set_flags: number;
+    level_idc: number;
+    seq_parameter_set_id: number;
+    pic_width_in_mbs_minus1: number;
+    pic_height_in_map_units_minus1: number;
+    frame_mbs_only_flag: number;
+    frame_crop_left_offset: number;
+    frame_crop_right_offset: number;
+    frame_crop_top_offset: number;
+    frame_crop_bottom_offset: number;
+    sar: [number, number];
+};
+
 export default class H264Parser {
     private track: Track;
 
@@ -126,31 +141,50 @@ export default class H264Parser {
      * associated video frames.
      */
     private static readSPS(data: Uint8Array): { width: number; height: number; } {
+        const {
+            pic_width_in_mbs_minus1,
+            frame_crop_left_offset,
+            frame_crop_right_offset,
+            frame_mbs_only_flag,
+            pic_height_in_map_units_minus1,
+            frame_crop_top_offset,
+            frame_crop_bottom_offset,
+            sar
+        } = this.parseSPS(data);
+
+        const sarScale = sar[0] / sar[1];
+        return {
+            width: Math.ceil((((pic_width_in_mbs_minus1 + 1) * 16) - frame_crop_left_offset * 2 - frame_crop_right_offset * 2) * sarScale),
+            height: ((2 - frame_mbs_only_flag) * (pic_height_in_map_units_minus1 + 1) * 16) -
+                ((frame_mbs_only_flag ? 2 : 4) * (frame_crop_top_offset + frame_crop_bottom_offset)),
+        }
+    }
+
+    public static parseSPS(data: Uint8Array): SPS {
         const decoder = new BitStream(data);
-        let frameCropLeftOffset = 0;
-        let frameCropRightOffset = 0;
-        let frameCropTopOffset = 0;
-        let frameCropBottomOffset = 0;
-        let sarScale = 1;
+        let frame_crop_left_offset = 0;
+        let frame_crop_right_offset = 0;
+        let frame_crop_top_offset = 0;
+        let frame_crop_bottom_offset = 0;
         decoder.readUByte();
-        const profileIdc = decoder.readUByte(); // profile_idc
-        decoder.skipBits(6); // constraint_set[0-5]_flag, u(6)
-        decoder.skipBits(2); // reserved_zero_2bits u(2),
-        decoder.skipBits(8); // level_idc u(8)
-        decoder.skipUEG(); // seq_parameter_set_id
+
+        const profile_idc = decoder.readUByte();
+        const constraint_set_flags = decoder.readUByte(); // constraint_set[0-5]_flag + reserved_zero_2bits u(2),
+        const level_idc = decoder.readBits(8); // level_idc u(8)
+        const seq_parameter_set_id = decoder.readUEG(); // seq_parameter_set_id
         // some profiles have more optional data we don't need
-        if (profileIdc === 100 ||
-            profileIdc === 110 ||
-            profileIdc === 122 ||
-            profileIdc === 244 ||
-            profileIdc === 44 ||
-            profileIdc === 83 ||
-            profileIdc === 86 ||
-            profileIdc === 118 ||
-            profileIdc === 128 ||
-            profileIdc === 138 ||
-            profileIdc === 139 ||
-            profileIdc === 134) {
+        if (profile_idc === 100 ||
+            profile_idc === 110 ||
+            profile_idc === 122 ||
+            profile_idc === 244 ||
+            profile_idc === 44 ||
+            profile_idc === 83 ||
+            profile_idc === 86 ||
+            profile_idc === 118 ||
+            profile_idc === 128 ||
+            profile_idc === 138 ||
+            profile_idc === 139 ||
+            profile_idc === 134) {
             const chromaFormatIdc = decoder.readUEG();
             if (chromaFormatIdc === 3) {
                 decoder.skipBits(1); // separate_colour_plane_flag
@@ -186,52 +220,50 @@ export default class H264Parser {
         }
         decoder.skipUEG(); // max_num_ref_frames
         decoder.skipBits(1); // gaps_in_frame_num_value_allowed_flag
-        const picWidthInMbsMinus1 = decoder.readUEG();
-        const picHeightInMapUnitsMinus1 = decoder.readUEG();
-        const frameMbsOnlyFlag = decoder.readBits(1);
-        if (frameMbsOnlyFlag === 0) {
+        const pic_width_in_mbs_minus1 = decoder.readUEG();
+        const pic_height_in_map_units_minus1 = decoder.readUEG();
+        const frame_mbs_only_flag = decoder.readBits(1);
+        if (frame_mbs_only_flag === 0) {
             decoder.skipBits(1); // mb_adaptive_frame_field_flag
         }
         decoder.skipBits(1); // direct_8x8_inference_flag
         if (decoder.readBoolean()) { // frame_cropping_flag
-            frameCropLeftOffset = decoder.readUEG();
-            frameCropRightOffset = decoder.readUEG();
-            frameCropTopOffset = decoder.readUEG();
-            frameCropBottomOffset = decoder.readUEG();
+            frame_crop_left_offset = decoder.readUEG();
+            frame_crop_right_offset = decoder.readUEG();
+            frame_crop_top_offset = decoder.readUEG();
+            frame_crop_bottom_offset = decoder.readUEG();
         }
-        if (decoder.readBoolean()) {
-            // vui_parameters_present_flag
-            if (decoder.readBoolean()) {
-                // aspect_ratio_info_present_flag
-                let sarRatio;
+        const vui_parameters_present_flag = decoder.readBoolean();
+        let aspect_ratio_info_present_flag = false;
+        let sar: [number, number] = [1, 1];
+        if (vui_parameters_present_flag) {
+            aspect_ratio_info_present_flag = decoder.readBoolean();
+            if (aspect_ratio_info_present_flag) {
                 const aspectRatioIdc = decoder.readUByte();
                 switch (aspectRatioIdc) {
-                    case 1: sarRatio = [1, 1]; break;
-                    case 2: sarRatio = [12, 11]; break;
-                    case 3: sarRatio = [10, 11]; break;
-                    case 4: sarRatio = [16, 11]; break;
-                    case 5: sarRatio = [40, 33]; break;
-                    case 6: sarRatio = [24, 11]; break;
-                    case 7: sarRatio = [20, 11]; break;
-                    case 8: sarRatio = [32, 11]; break;
-                    case 9: sarRatio = [80, 33]; break;
-                    case 10: sarRatio = [18, 11]; break;
-                    case 11: sarRatio = [15, 11]; break;
-                    case 12: sarRatio = [64, 33]; break;
-                    case 13: sarRatio = [160, 99]; break;
-                    case 14: sarRatio = [4, 3]; break;
-                    case 15: sarRatio = [3, 2]; break;
-                    case 16: sarRatio = [2, 1]; break;
+                    case 1: sar = [1, 1]; break;
+                    case 2: sar = [12, 11]; break;
+                    case 3: sar = [10, 11]; break;
+                    case 4: sar = [16, 11]; break;
+                    case 5: sar = [40, 33]; break;
+                    case 6: sar = [24, 11]; break;
+                    case 7: sar = [20, 11]; break;
+                    case 8: sar = [32, 11]; break;
+                    case 9: sar = [80, 33]; break;
+                    case 10: sar = [18, 11]; break;
+                    case 11: sar = [15, 11]; break;
+                    case 12: sar = [64, 33]; break;
+                    case 13: sar = [160, 99]; break;
+                    case 14: sar = [4, 3]; break;
+                    case 15: sar = [3, 2]; break;
+                    case 16: sar = [2, 1]; break;
                     case 255: {
-                        sarRatio = [decoder.readUByte() << 8 | decoder.readUByte(), decoder.readUByte() << 8 | decoder.readUByte()];
+                        sar = [decoder.readUByte() << 8 | decoder.readUByte(), decoder.readUByte() << 8 | decoder.readUByte()];
                         break;
                     }
                     default: {
                         debug.error(`  H264: Unknown aspectRatioIdc=${aspectRatioIdc}`);
                     }
-                }
-                if (sarRatio) {
-                    sarScale = sarRatio[0] / sarRatio[1];
                 }
             }
             if (decoder.readBoolean()) {
@@ -267,9 +299,18 @@ export default class H264Parser {
             }
         }
         return {
-            width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale),
-            height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) -
-                    ((frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
+            profile_idc,
+            constraint_set_flags,
+            level_idc,
+            seq_parameter_set_id,
+            pic_width_in_mbs_minus1,
+            pic_height_in_map_units_minus1,
+            frame_mbs_only_flag,
+            frame_crop_left_offset,
+            frame_crop_right_offset,
+            frame_crop_top_offset,
+            frame_crop_bottom_offset,
+            sar,
         };
     }
 
