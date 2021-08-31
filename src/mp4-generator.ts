@@ -15,6 +15,7 @@ export default class MP4 {
     private static HDLR: Uint8Array;
     private static DINF: Uint8Array;
     private static STSD: Uint8Array;
+    // @ts-ignore
     private static SMHD: Uint8Array;
     private static VMHD: Uint8Array;
     private static STSZ: Uint8Array;

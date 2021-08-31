@@ -8,16 +8,15 @@ export { setLogger } from './util/debug';
 
 export default class VideoConverter {
 
-    private mediaSource: MediaSource;
+    private mediaSource!: MediaSource;
     private receiveBuffer: VideoStreamBuffer = new VideoStreamBuffer();
-    private remuxer: H264Remuxer;
+    private remuxer!: H264Remuxer;
 
-    private mediaReady: boolean;
+    private mediaReady!: boolean;
     private mediaReadyPromise: Promise<void> | undefined;
     private queue: Uint8Array[] = [];
-    private isFirstFrame: boolean;
 
-    public sourceBuffer: SourceBuffer;
+    public sourceBuffer!: SourceBuffer;
 
     static get errorNotes() {
         return {
@@ -120,7 +119,6 @@ export default class VideoConverter {
         this.mediaReady = false;
         this.mediaReadyPromise = undefined;
         this.queue = [];
-        this.isFirstFrame = true;
 
         this.setup();
     }
