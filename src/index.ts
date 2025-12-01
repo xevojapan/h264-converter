@@ -1,10 +1,13 @@
 import H264Remuxer from './h264-remuxer';
 import MP4 from './mp4-generator';
+import { OnSourceBufferCreatedCallback } from './types';
 import * as debug from './util/debug';
 import VideoStreamBuffer from './util/nalu-stream-buffer';
 
 export const mimeType = 'video/mp4; codecs="avc1.42E01E"';
 export { setLogger } from './util/debug';
+
+
 
 export default class VideoConverter {
 
@@ -17,6 +20,8 @@ export default class VideoConverter {
     private queue: Uint8Array[] = [];
 
     public sourceBuffer!: SourceBuffer;
+
+    private sourceCreatedHandler?: OnSourceBufferCreatedCallback;
 
     static get errorNotes() {
         return {
@@ -70,6 +75,9 @@ export default class VideoConverter {
                     debug.error('  SourceBuffer errored!');
                 });
                 this.mediaReady = true;
+                if (this.sourceCreatedHandler) {
+                    this.sourceCreatedHandler(this.sourceBuffer);
+                }   
                 resolve();
             }, false);
             this.mediaSource.addEventListener('sourceclose', () => {
@@ -102,6 +110,10 @@ export default class VideoConverter {
             return;
         }
         this.element.pause();
+    }
+
+    onSourceBufferCreated(handler: OnSourceBufferCreatedCallback) {
+        this.sourceCreatedHandler = handler;
     }
 
     public reset(): void {

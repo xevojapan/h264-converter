@@ -18,3 +18,8 @@ export interface Track {
 export interface TrackSample {
     size: number;
 }
+
+
+
+
+export type OnSourceBufferCreatedCallback = (buffer: SourceBuffer) => void;
